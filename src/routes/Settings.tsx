@@ -133,11 +133,12 @@ export function Settings() {
         <CardBody>
           <h2 className="font-serif text-lg italic">About</h2>
           <p className="mt-2 font-sans text-sm text-ink-500 dark:text-ink-400">
-            365 passages from <em>Story of a Soul</em> (T.N. Taylor tr., 1922)
-            and the <em>Counsels and Reminiscences</em> bundled with it, drawn
-            from Project Gutenberg ebook #16772. The selection leans toward
-            St Thérèse's central theme: the merciful love of the Father, and
-            her little way of confidence in it.
+            365 sequential passages from <em>Story of a Soul</em> (T.N. Taylor
+            tr., 1922), the <em>Counsels and Reminiscences</em>, and her
+            <em> letters</em> — drawn from Project Gutenberg ebook #16772 and
+            read in the order Thérèse wrote them. Each day is paired with a
+            saying of Christ from the Gospels (American Standard Version,
+            1901), chosen by thematic resonance with the day's reading.
           </p>
         </CardBody>
       </Card>

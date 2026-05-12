@@ -45,6 +45,18 @@ export function DayView({ day, isToday, onChangeDay }: Props) {
         {passage.citation}
       </p>
 
+      <aside className="mt-10 rounded border-l-2 border-accent/40 bg-parchment-50/60 px-5 py-4 dark:border-accent-muted/40 dark:bg-ink-800/40">
+        <p className="mb-2 font-sans text-[0.7rem] uppercase tracking-[0.2em] text-accent dark:text-accent-muted">
+          From the Gospels
+        </p>
+        <blockquote className="font-serif italic leading-relaxed text-ink-700 dark:text-parchment-200">
+          “{passage.gospel.text}”
+        </blockquote>
+        <p className="mt-2 text-right font-sans text-xs text-ink-400 dark:text-ink-500">
+          — {passage.gospel.ref} (ASV)
+        </p>
+      </aside>
+
       <section className="mt-12">
         <h2 className="mb-3 font-sans text-xs uppercase tracking-wider text-ink-400 dark:text-ink-500">
           Your note
