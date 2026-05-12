@@ -1,10 +1,16 @@
 import raw from "@data/devotional/passages.json";
 
+export interface GospelPairing {
+  ref: string;
+  text: string;
+}
+
 export interface Passage {
   day: number;
   title: string;
   passage: string;
   citation: string;
+  gospel: GospelPairing;
 }
 
 export const passages: Passage[] = raw as Passage[];

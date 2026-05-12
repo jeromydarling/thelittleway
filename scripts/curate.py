@@ -23,6 +23,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "data" / "source" / "story_of_a_soul_16772.txt"
 OUT = ROOT / "data" / "devotional" / "passages.json"
+ASV_SRC = ROOT / "data" / "source" / "asv_1901.json"
+SAYINGS_SRC = ROOT / "data" / "gospel" / "sayings.json"
+
+# Standard Protestant book numbering used by bibleapi/bibleapi-bibles-json
+BOOK_NUMBERS: dict[str, int] = {
+    "Matthew": 40,
+    "Mark": 41,
+    "Luke": 42,
+    "John": 43,
+}
 
 
 # (line_start, line_end_exclusive, label_for_citation)
@@ -263,6 +273,112 @@ def dominant_section(group: list[ParaItem]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Gospel pairing
+# ---------------------------------------------------------------------------
+
+@dataclass
+class Saying:
+    ref: str              # display reference, e.g. "Matthew 11:28-30"
+    text: str             # verbatim ASV verses, joined
+    themes: tuple[str, ...]
+
+
+def _parse_ref(ref: str) -> tuple[str, int, int, int]:
+    """Parse "Matthew 11:28-30" → ("Matthew", 11, 28, 30). A single-verse
+    ref like "Mark 5:34" expands to start=end=34."""
+    m = re.match(r"^([1-3]?\s?[A-Za-z]+)\s+(\d+):(\d+)(?:-(\d+))?$", ref.strip())
+    if not m:
+        raise ValueError(f"Bad ref: {ref}")
+    book = m.group(1).strip()
+    chap = int(m.group(2))
+    v_start = int(m.group(3))
+    v_end = int(m.group(4)) if m.group(4) else v_start
+    return book, chap, v_start, v_end
+
+
+def _load_asv_index() -> dict[int, dict[int, dict[int, str]]]:
+    """Index ASV rows as { book_num: { chapter: { verse: text } } }."""
+    data = json.loads(ASV_SRC.read_text(encoding="utf-8"))
+    out: dict[int, dict[int, dict[int, str]]] = {}
+    for r in data["resultset"]["row"]:
+        _id, bk, ch, vs, txt = r["field"]
+        out.setdefault(bk, {}).setdefault(ch, {})[vs] = txt
+    return out
+
+
+def load_sayings() -> list[Saying]:
+    raw = json.loads(SAYINGS_SRC.read_text(encoding="utf-8"))
+    asv = _load_asv_index()
+    sayings: list[Saying] = []
+    for entry in raw:
+        book, chap, v0, v1 = _parse_ref(entry["ref"])
+        bk = BOOK_NUMBERS.get(book)
+        if bk is None or bk not in asv or chap not in asv[bk]:
+            raise ValueError(f"Unknown book/chapter in saying ref: {entry['ref']}")
+        verses = [asv[bk][chap].get(v) for v in range(v0, v1 + 1)]
+        if any(v is None for v in verses):
+            raise ValueError(f"Missing verses in {entry['ref']}")
+        text = " ".join(verses).strip()
+        themes = tuple(t.lower() for t in entry["themes"])
+        sayings.append(Saying(ref=entry["ref"], text=text, themes=themes))
+    return sayings
+
+
+_TOKEN_RE = re.compile(r"[a-z]{3,}")
+
+
+def _theme_score(passage_text: str, saying: Saying) -> float:
+    """Higher = better thematic match. Counts theme-keyword occurrences in
+    the passage (substring match catches multi-word themes like "lost
+    sheep" or "merciful love"), normalised by passage length."""
+    haystack = passage_text.lower()
+    score = 0.0
+    for theme in saying.themes:
+        if " " in theme:
+            # Multi-word phrases count more — they're more specific.
+            hits = haystack.count(theme)
+            score += hits * 2.5
+        else:
+            # Word-boundary match for single tokens
+            pattern = re.compile(rf"\b{re.escape(theme)}\b")
+            score += len(pattern.findall(haystack))
+    # Slight per-character penalty so heavily-tagged sayings don't always win
+    return score / max(len(saying.themes) ** 0.5, 1.0)
+
+
+def pair_sayings_to_days(
+    passages: list[str],
+    sayings: list[Saying],
+    max_uses: int = 4,
+) -> list[Saying]:
+    """For each day's passage, pick the saying with the highest theme score
+    that hasn't already been used `max_uses` times. If multiple sayings tie,
+    prefer the one used fewer times so far. Returns a list parallel to
+    `passages`."""
+    use_count: dict[int, int] = {i: 0 for i in range(len(sayings))}
+    out: list[Saying] = []
+    for passage in passages:
+        ranked = sorted(
+            range(len(sayings)),
+            key=lambda i: (
+                -_theme_score(passage, sayings[i]),
+                use_count[i],
+                i,
+            ),
+        )
+        choice = None
+        for idx in ranked:
+            if use_count[idx] < max_uses:
+                choice = idx
+                break
+        if choice is None:
+            choice = ranked[0]
+        use_count[choice] += 1
+        out.append(sayings[choice])
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Build
 # ---------------------------------------------------------------------------
 
@@ -272,6 +388,8 @@ class Entry:
     title: str
     passage: str
     citation: str
+    gospel_ref: str
+    gospel_text: str
 
 
 def build() -> list[Entry]:
@@ -281,10 +399,13 @@ def build() -> list[Entry]:
         raise RuntimeError("No paragraphs assembled from source")
 
     days = chunk_to_days(items, TOTAL_DAYS)
+    sayings = load_sayings()
+
+    passages: list[str] = [" ".join(it.text for it in g) for g in days]
+    paired = pair_sayings_to_days(passages, sayings)
 
     entries: list[Entry] = []
-    for i, group in enumerate(days, start=1):
-        passage = " ".join(it.text for it in group)
+    for i, (group, passage, saying) in enumerate(zip(days, passages, paired), start=1):
         section = dominant_section(group)
         fallback = f"{section} — Day {i}"
         title = derive_title(passage, fallback)
@@ -294,6 +415,8 @@ def build() -> list[Entry]:
                 title=title,
                 passage=passage,
                 citation=f"Story of a Soul — {section}",
+                gospel_ref=saying.ref,
+                gospel_text=saying.text,
             )
         )
     return entries
@@ -308,6 +431,10 @@ def main() -> None:
             "title": e.title,
             "passage": e.passage,
             "citation": e.citation,
+            "gospel": {
+                "ref": e.gospel_ref,
+                "text": e.gospel_text,
+            },
         }
         for e in entries
     ]
@@ -328,6 +455,15 @@ def main() -> None:
         section_days.setdefault(e["citation"], []).append(e["day"])
     for cit, days in section_days.items():
         print(f"  {cit}: days {days[0]}-{days[-1]} ({len(days)})")
+
+    saying_uses: dict[str, int] = {}
+    for e in payload:
+        ref = e["gospel"]["ref"]
+        saying_uses[ref] = saying_uses.get(ref, 0) + 1
+    print(
+        f"\n  gospel pairings: {len(saying_uses)} distinct sayings used across 365 days "
+        f"(max uses of any one: {max(saying_uses.values())})"
+    )
 
 
 if __name__ == "__main__":

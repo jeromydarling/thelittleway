@@ -61,6 +61,11 @@ check("Day badge mentions Day 1", /Day 1 of 365/.test(dayBadge ?? ""));
 const citation = await page.locator("article >> text=/Story of a Soul —/").count();
 check("citation rendered", citation >= 1);
 
+const gospelLabel = await page.locator("text=From the Gospels").count();
+check("gospel pairing rendered", gospelLabel >= 1);
+const asvCitation = await page.locator("text=/\\(ASV\\)/").count();
+check("ASV citation present", asvCitation >= 1);
+
 console.log("→ select & highlight a span of the passage");
 const passageBox = await page.locator(".passage-text").first();
 await passageBox.evaluate((el) => {
