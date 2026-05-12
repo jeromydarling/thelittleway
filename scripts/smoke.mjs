@@ -84,12 +84,14 @@ await passageBox.evaluate((el) => {
   sel?.addRange(r);
   document.dispatchEvent(new Event("selectionchange"));
 });
-// Wait for the floating Highlight button
-await page.waitForSelector("[data-hl-action] button", { timeout: 5000 });
-await page.locator("[data-hl-action] button").click();
+// Wait for the floating color-picker, then click the gold swatch
+await page.waitForSelector("[data-hl-action] button[aria-label*='Gold']", { timeout: 5000 });
+await page.locator("[data-hl-action] button[aria-label*='Gold']").click();
 await page.waitForSelector(".passage-text mark.user-hl", { timeout: 5000 });
 const markCount = await page.locator(".passage-text mark.user-hl").count();
 check("highlight rendered as <mark>", markCount === 1);
+const goldMarks = await page.locator(".passage-text mark[data-color='gold']").count();
+check("highlight has gold color", goldMarks === 1);
 
 console.log("→ write a note and verify it persists across reload");
 const noteText = "Today: trust, not effort.";

@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, Focus, Printer } from "lucide-react";
 import { getPassage, TOTAL_DAYS } from "@/lib/passages";
 import { HighlightablePassage } from "@/components/HighlightablePassage";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { useNotes } from "@/stores/useNotes";
+import { useFavorites } from "@/stores/useFavorites";
+import { useSettings } from "@/stores/useSettings";
+import { liturgicalHint } from "@/lib/liturgy";
+import { cn } from "@/lib/utils";
 
 interface Props {
   day: number;
@@ -16,7 +20,12 @@ export function DayView({ day, isToday, onChangeDay }: Props) {
   const passage = getPassage(day);
   const note = useNotes((s) => s.byDay[day] ?? "");
   const setNote = useNotes((s) => s.setNote);
+  const isFavorite = useFavorites((s) => Boolean(s.byDay[day]));
+  const toggleFavorite = useFavorites((s) => s.toggle);
+  const focusMode = useSettings((s) => s.focusMode);
+  const setFocusMode = useSettings((s) => s.setFocusMode);
   const [draft, setDraft] = useState(note);
+  const hint = isToday ? liturgicalHint() : null;
 
   useEffect(() => {
     setDraft(note);
@@ -31,15 +40,42 @@ export function DayView({ day, isToday, onChangeDay }: Props) {
         <p className="font-sans text-[0.7rem] uppercase tracking-[0.2em] text-accent-muted">
           Day {day} of {TOTAL_DAYS} {isToday && <span className="ml-2 text-accent">· Today</span>}
         </p>
+        {hint && (
+          <p className="mt-1 font-serif text-xs italic text-ink-400 dark:text-ink-500">
+            {hint.label}
+          </p>
+        )}
         <h1 className="mt-3 font-serif text-3xl italic leading-snug text-ink-900 dark:text-parchment-100">
           {passage.title}
         </h1>
+        <button
+          type="button"
+          onClick={() => toggleFavorite(day)}
+          aria-label={isFavorite ? "Remove from favorites" : "Save to favorites"}
+          aria-pressed={isFavorite}
+          className={cn(
+            "mt-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-sans text-[0.7rem] uppercase tracking-[0.18em] transition-colors print:hidden",
+            isFavorite
+              ? "bg-accent/10 text-accent dark:bg-accent-muted/15 dark:text-accent-muted"
+              : "text-ink-300 hover:text-accent dark:text-ink-500 dark:hover:text-accent-muted",
+          )}
+        >
+          <Heart
+            className={cn("h-3.5 w-3.5", isFavorite && "fill-current")}
+            aria-hidden
+          />
+          {isFavorite ? "Kept" : "Keep this day"}
+        </button>
         <p className="ornament mt-4" aria-hidden>
           ✣
         </p>
       </header>
 
-      <HighlightablePassage day={day} passage={passage.passage} />
+      <HighlightablePassage
+        day={day}
+        passage={passage.passage}
+        citation={passage.citation}
+      />
 
       <p className="mt-8 text-right font-sans text-xs italic text-ink-400 dark:text-ink-500">
         {passage.citation}
@@ -72,7 +108,7 @@ export function DayView({ day, isToday, onChangeDay }: Props) {
         />
       </section>
 
-      <nav className="mt-10 flex items-center justify-between">
+      <nav className="mt-10 flex items-center justify-between print:hidden">
         <Button
           variant="ghost"
           size="sm"
@@ -81,6 +117,25 @@ export function DayView({ day, isToday, onChangeDay }: Props) {
         >
           <ChevronLeft className="h-4 w-4" /> Day {prev ?? "—"}
         </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setFocusMode(!focusMode)}
+            title={focusMode ? "Exit focus mode" : "Focus mode"}
+            aria-pressed={focusMode}
+          >
+            <Focus className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => window.print()}
+            title="Print this day"
+          >
+            <Printer className="h-4 w-4" />
+          </Button>
+        </div>
         <Button
           variant="ghost"
           size="sm"

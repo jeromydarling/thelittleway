@@ -45,25 +45,90 @@
     @apply text-parchment-200;
   }
 
-  /* Highlight mark inside the passage */
+  /* Drop cap on the day's reading — devotional book aesthetic. We use a
+     scoped class so it only applies to the daily passage, not to the
+     gospel sidebar or anywhere else. */
+  .with-drop-cap::first-letter {
+    @apply font-serif text-accent dark:text-accent-muted;
+    float: left;
+    font-size: 3.25em;
+    line-height: 0.9;
+    margin: 0.06em 0.08em 0 0;
+    font-weight: 500;
+  }
+
+  /* Highlight marks inside the passage. Three colors carry meaning rather
+     than decoration: gold = consolation, rose = mercy, violet = suffering.
+     A single highlighter underline-style fill keeps the reading clean. */
   mark.user-hl {
-    background: linear-gradient(
-      transparent 60%,
-      rgba(232, 196, 110, 0.55) 60%
-    );
     color: inherit;
     padding: 0 0.05em;
     border-radius: 2px;
+    background: linear-gradient(transparent 60%, rgba(232, 196, 110, 0.55) 60%);
   }
-
-  .dark mark.user-hl {
-    background: linear-gradient(
-      transparent 60%,
-      rgba(232, 196, 110, 0.35) 60%
-    );
+  mark.user-hl[data-color="gold"] {
+    background: linear-gradient(transparent 60%, rgba(232, 196, 110, 0.55) 60%);
+  }
+  mark.user-hl[data-color="rose"] {
+    background: linear-gradient(transparent 60%, rgba(230, 154, 154, 0.5) 60%);
+  }
+  mark.user-hl[data-color="violet"] {
+    background: linear-gradient(transparent 60%, rgba(178, 152, 220, 0.5) 60%);
+  }
+  .dark mark.user-hl[data-color="gold"] {
+    background: linear-gradient(transparent 60%, rgba(232, 196, 110, 0.35) 60%);
+  }
+  .dark mark.user-hl[data-color="rose"] {
+    background: linear-gradient(transparent 60%, rgba(218, 138, 138, 0.3) 60%);
+  }
+  .dark mark.user-hl[data-color="violet"] {
+    background: linear-gradient(transparent 60%, rgba(168, 142, 212, 0.32) 60%);
   }
 
   .ornament {
     @apply mx-auto block w-16 select-none text-center text-accent/60 dark:text-accent-muted/50;
+  }
+
+  /* Focus mode: hide chrome, widen breathing room. Keeps the passage and
+     gospel pairing; everything else fades. */
+  .focus-mode header,
+  .focus-mode footer,
+  .focus-mode [data-progress-strip] {
+    @apply opacity-0 pointer-events-none;
+  }
+  .focus-mode .passage-text {
+    @apply text-[1.2rem] leading-[1.8];
+  }
+}
+
+/* Print stylesheet — clean, paper-like, generous margins for handwritten
+   notes alongside the day's reading. */
+@media print {
+  :root {
+    color-scheme: light !important;
+  }
+  body {
+    @apply bg-white text-ink-900;
+    font-size: 11pt;
+  }
+  header, footer, nav, [data-progress-strip], .print\:hidden {
+    display: none !important;
+  }
+  .container-narrow {
+    @apply max-w-full px-0;
+  }
+  .passage-text {
+    @apply text-[12pt] leading-[1.55] text-ink-900;
+  }
+  mark.user-hl {
+    background: none !important;
+    border-bottom: 1px solid #999;
+  }
+  article {
+    page-break-after: always;
+  }
+  /* Wide right margin for handwritten notes next to the reading */
+  main {
+    @apply pr-32;
   }
 }

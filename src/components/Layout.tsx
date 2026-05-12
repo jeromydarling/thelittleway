@@ -3,9 +3,11 @@ import { useEffect } from "react";
 import { useSettings } from "@/stores/useSettings";
 import { cn } from "@/lib/utils";
 import { useDailyReminder } from "@/hooks/useDailyReminder";
+import { ProgressStrip } from "@/components/ProgressStrip";
 
 const links = [
   { to: "/", label: "Today", end: true },
+  { to: "/favorites", label: "Favorites" },
   { to: "/highlights", label: "Highlights" },
   { to: "/notes", label: "Notes" },
   { to: "/settings", label: "Settings" },
@@ -13,6 +15,7 @@ const links = [
 
 export function Layout() {
   const theme = useSettings((s) => s.theme);
+  const focusMode = useSettings((s) => s.focusMode);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -29,11 +32,15 @@ export function Layout() {
     return () => mq.removeEventListener("change", apply);
   }, [theme]);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle("focus-mode", focusMode);
+  }, [focusMode]);
+
   useDailyReminder();
 
   return (
     <div className="min-h-dvh">
-      <header className="border-b border-ink-200/40 dark:border-ink-700/40">
+      <header className="border-b border-ink-200/40 print:hidden dark:border-ink-700/40">
         <div className="container-narrow flex items-center justify-between py-4">
           <NavLink to="/" className="font-serif text-lg italic text-accent dark:text-accent-muted">
             The Little Way
@@ -59,10 +66,11 @@ export function Layout() {
           </nav>
         </div>
       </header>
+      <ProgressStrip />
       <main className="container-narrow py-10">
         <Outlet />
       </main>
-      <footer className="container-narrow pb-12 text-center text-xs text-ink-400 dark:text-ink-500">
+      <footer className="container-narrow pb-12 text-center text-xs text-ink-400 print:hidden dark:text-ink-500">
         <p className="font-sans">
           Source · <em>Story of a Soul</em>, tr. T.N. Taylor · Project Gutenberg #16772 · public domain
         </p>

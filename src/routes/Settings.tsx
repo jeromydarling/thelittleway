@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { useSettings } from "@/stores/useSettings";
 import { passages } from "@/lib/passages";
+import { useNotes } from "@/stores/useNotes";
+import { useHighlights } from "@/stores/useHighlights";
+import { useFavorites } from "@/stores/useFavorites";
+import { downloadJournalMarkdown } from "@/lib/exportJournal";
 import {
   permissionState,
   requestPermission,
@@ -19,9 +23,16 @@ export function Settings() {
     setReminderTime,
     theme,
     setTheme,
+    focusMode,
+    setFocusMode,
     startDate,
     resetProgress,
   } = useSettings();
+  const notes = useNotes((s) => s.byDay);
+  const highlights = useHighlights((s) => s.byDay);
+  const favorites = useFavorites((s) => s.byDay);
+  const hasJournal =
+    Object.keys(notes).length + Object.keys(highlights).length + Object.keys(favorites).length > 0;
 
   const [perm, setPerm] = useState<PermissionState>("default");
   useEffect(() => {
@@ -92,19 +103,67 @@ export function Settings() {
       <Card>
         <CardBody className="space-y-4">
           <h2 className="font-serif text-lg italic">Appearance</h2>
-          <div className="flex gap-2">
-            {(["light", "dark", "system"] as const).map((t) => (
-              <Button
-                key={t}
-                variant={theme === t ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTheme(t)}
-                className="capitalize"
-              >
-                {t}
-              </Button>
-            ))}
+          <div>
+            <p className="mb-2 font-sans text-sm text-ink-500 dark:text-ink-400">
+              Theme
+            </p>
+            <div className="flex gap-2">
+              {(["light", "dark", "system"] as const).map((t) => (
+                <Button
+                  key={t}
+                  variant={theme === t ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTheme(t)}
+                  className="capitalize"
+                >
+                  {t}
+                </Button>
+              ))}
+            </div>
           </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-sans text-sm">Focus mode</p>
+              <p className="font-sans text-xs text-ink-400 dark:text-ink-500">
+                Hide navigation and dim chrome for deep reading.
+              </p>
+            </div>
+            <Switch
+              checked={focusMode}
+              onChange={(e) => setFocusMode(e.target.checked)}
+            />
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardBody className="space-y-3">
+          <h2 className="font-serif text-lg italic">Your journal</h2>
+          <p className="font-sans text-sm text-ink-500 dark:text-ink-400">
+            Download every kept day, highlight, and note as a single Markdown
+            file. Your writing is yours — keep a copy anywhere you like.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!hasJournal}
+            onClick={() =>
+              downloadJournalMarkdown({
+                notes,
+                highlights,
+                favorites,
+                startDate,
+              })
+            }
+          >
+            Download journal (Markdown)
+          </Button>
+          {!hasJournal && (
+            <p className="font-sans text-xs text-ink-400 dark:text-ink-500">
+              Nothing to export yet. Add a highlight, write a note, or keep a
+              day with the heart button.
+            </p>
+          )}
         </CardBody>
       </Card>
 
