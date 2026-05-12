@@ -40,12 +40,12 @@ export function Hero() {
   }, [base]);
 
   return (
-    <figure className="mx-auto mb-10 max-w-[260px] text-center">
+    <figure className="mx-auto mb-6 max-w-[200px] text-center sm:mb-10 sm:max-w-[260px]">
       {portrait ? (
         <img
           src={portrait}
           alt="Portrait of St Thérèse of Lisieux"
-          className="mx-auto rounded-full object-cover shadow-[0_2px_24px_rgba(107,66,38,0.18)] ring-1 ring-accent/20 dark:ring-accent-muted/30"
+          className="mx-auto h-auto w-full rounded-full object-cover shadow-[0_2px_24px_rgba(107,66,38,0.18)] ring-1 ring-accent/20 dark:ring-accent-muted/30"
           width={220}
           height={220}
           loading="eager"
@@ -54,7 +54,7 @@ export function Hero() {
         <img
           src={`${base}/hero-rose.svg`}
           alt="A rose, in memory of St Thérèse of Lisieux"
-          className="mx-auto"
+          className="mx-auto h-auto w-full"
           width={220}
           height={300}
           loading="eager"

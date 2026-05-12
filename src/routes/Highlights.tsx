@@ -77,7 +77,7 @@ export function Highlights() {
                 </div>
                 <ul className="space-y-2">
                   {ranges.map((r, i) => (
-                    <li key={i} className="passage-text">
+                    <li key={i} className="passage-text break-words">
                       <mark className="user-hl" data-color={r.color}>
                         {p.passage.slice(r.start, r.end)}
                       </mark>

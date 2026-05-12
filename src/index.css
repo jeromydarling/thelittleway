@@ -10,11 +10,38 @@
   html {
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    /* Snap a hair below the focused element so a focused textarea doesn't
+       sit flush against the iOS keyboard. */
+    scroll-padding-bottom: 6rem;
   }
 
   body {
     @apply bg-parchment-100 text-ink-900 font-serif;
     font-feature-settings: "lnum" 1, "kern" 1;
+    /* Kill the 300ms tap delay and the iOS grey flash on every button/link. */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Honor safe-area on the horizontal axis too (landscape notch). */
+  .container-narrow {
+    padding-left: max(1.25rem, env(safe-area-inset-left));
+    padding-right: max(1.25rem, env(safe-area-inset-right));
+  }
+
+  /* iOS auto-zooms on focused inputs with font-size < 16px. Force 16px on
+     anything that can take focus. */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+  @media (min-width: 640px) {
+    input,
+    textarea,
+    select {
+      font-size: 0.875rem;
+    }
   }
 
   .dark body {

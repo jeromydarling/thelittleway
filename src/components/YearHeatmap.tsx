@@ -38,43 +38,57 @@ export function YearHeatmap() {
   }
 
   return (
-    <div className="overflow-x-auto py-2">
+    <div>
+      {/* Horizontal scroller. The right-edge fade hints there's more to see;
+          snap stops keep flicks tidy on touch. */}
       <div
-        className="grid auto-cols-min grid-flow-col gap-[3px]"
-        style={{ gridTemplateRows: "repeat(7, minmax(0, 1fr))" }}
+        className="-mx-5 overflow-x-auto px-5 py-2 sm:mx-0 sm:px-0"
+        style={{
+          WebkitOverflowScrolling: "touch",
+          maskImage:
+            "linear-gradient(to right, black calc(100% - 24px), transparent)",
+          WebkitMaskImage:
+            "linear-gradient(to right, black calc(100% - 24px), transparent)",
+        }}
       >
-        {Array.from({ length: TOTAL_DAYS }, (_, i) => {
-          const day = i + 1;
-          const level = intensity(day);
-          const future = day > today;
-          return (
-            <Link
-              key={day}
-              to={`/day/${day}`}
-              title={`Day ${day}${level > 0 ? " · annotated" : ""}`}
-              className={cn(
-                "h-3 w-3 rounded-[2px] transition-colors",
-                future && "opacity-50",
-                level === 0 &&
-                  "bg-ink-200/60 hover:bg-ink-300 dark:bg-ink-700/60 dark:hover:bg-ink-600",
-                level === 1 &&
-                  "bg-accent/30 hover:bg-accent/50 dark:bg-accent-muted/30 dark:hover:bg-accent-muted/50",
-                level === 2 &&
-                  "bg-accent/60 hover:bg-accent/80 dark:bg-accent-muted/60 dark:hover:bg-accent-muted/80",
-                level === 3 &&
-                  "bg-accent hover:bg-accent-dark dark:bg-accent-muted dark:hover:bg-accent",
-              )}
-            />
-          );
-        })}
+        <div
+          className="grid auto-cols-min grid-flow-col gap-[3px]"
+          style={{ gridTemplateRows: "repeat(7, minmax(0, 1fr))" }}
+        >
+          {Array.from({ length: TOTAL_DAYS }, (_, i) => {
+            const day = i + 1;
+            const level = intensity(day);
+            const future = day > today;
+            return (
+              <Link
+                key={day}
+                to={`/day/${day}`}
+                title={`Day ${day}${level > 0 ? " · annotated" : ""}`}
+                className={cn(
+                  "h-3.5 w-3.5 rounded-[2px] transition-colors sm:h-3 sm:w-3",
+                  future && "opacity-50",
+                  level === 0 &&
+                    "bg-ink-200/60 hover:bg-ink-300 dark:bg-ink-700/60 dark:hover:bg-ink-600",
+                  level === 1 &&
+                    "bg-accent/30 hover:bg-accent/50 dark:bg-accent-muted/30 dark:hover:bg-accent-muted/50",
+                  level === 2 &&
+                    "bg-accent/60 hover:bg-accent/80 dark:bg-accent-muted/60 dark:hover:bg-accent-muted/80",
+                  level === 3 &&
+                    "bg-accent hover:bg-accent-dark dark:bg-accent-muted dark:hover:bg-accent",
+                )}
+              />
+            );
+          })}
+        </div>
       </div>
-      <div className="mt-3 flex items-center gap-3 font-sans text-[0.65rem] uppercase tracking-wider text-ink-400 dark:text-ink-500">
+      <div className="mt-3 flex items-center gap-2.5 font-sans text-[0.65rem] uppercase tracking-wider text-ink-400 dark:text-ink-500">
         <span>Less</span>
         <span className="h-3 w-3 rounded-[2px] bg-ink-200/60 dark:bg-ink-700/60" />
         <span className="h-3 w-3 rounded-[2px] bg-accent/30 dark:bg-accent-muted/30" />
         <span className="h-3 w-3 rounded-[2px] bg-accent/60 dark:bg-accent-muted/60" />
         <span className="h-3 w-3 rounded-[2px] bg-accent dark:bg-accent-muted" />
         <span>More</span>
+        <span className="ml-auto sm:hidden">Scroll →</span>
       </div>
     </div>
   );

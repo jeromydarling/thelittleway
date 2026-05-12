@@ -148,7 +148,7 @@ export function Settings() {
                   variant={theme === t ? "default" : "outline"}
                   size="sm"
                   onClick={() => setTheme(t)}
-                  className="capitalize"
+                  className="min-h-11 flex-1 capitalize sm:min-h-0 sm:flex-initial"
                 >
                   {t}
                 </Button>
@@ -187,7 +187,7 @@ export function Settings() {
             Download every kept day, highlight, and note as a single Markdown
             file. Your writing is yours — keep a copy anywhere you like.
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
             <Button
               variant="outline"
               size="sm"
@@ -200,6 +200,7 @@ export function Settings() {
                   startDate,
                 })
               }
+              className="min-h-11 sm:min-h-0"
             >
               Download as Markdown
             </Button>
@@ -215,6 +216,7 @@ export function Settings() {
                   startDate,
                 })
               }
+              className="min-h-11 sm:min-h-0"
             >
               Download backup (JSON)
             </Button>
@@ -222,6 +224,7 @@ export function Settings() {
               variant="outline"
               size="sm"
               onClick={() => fileInputRef.current?.click()}
+              className="min-h-11 sm:min-h-0"
             >
               Restore backup
             </Button>

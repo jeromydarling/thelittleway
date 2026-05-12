@@ -40,12 +40,21 @@ export function Layout() {
 
   return (
     <div className="min-h-dvh">
-      <header className="border-b border-ink-200/40 print:hidden dark:border-ink-700/40">
-        <div className="container-narrow flex items-center justify-between py-4">
-          <NavLink to="/" className="font-serif text-lg italic text-accent dark:text-accent-muted">
+      <header
+        className="border-b border-ink-200/40 print:hidden dark:border-ink-700/40"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
+        <div className="container-narrow flex flex-col items-center gap-2 py-3 sm:flex-row sm:justify-between sm:py-4">
+          <NavLink
+            to="/"
+            className="font-serif text-lg italic text-accent dark:text-accent-muted"
+          >
             The Little Way
           </NavLink>
-          <nav className="flex items-center gap-1 text-xs uppercase tracking-wider">
+          <nav
+            className="-mx-5 flex w-full items-center justify-center gap-0.5 overflow-x-auto px-5 text-xs uppercase tracking-wider sm:mx-0 sm:w-auto sm:gap-1 sm:overflow-visible sm:px-0"
+            style={{ scrollbarWidth: "none" }}
+          >
             {links.map((l) => (
               <NavLink
                 key={l.to}
@@ -53,7 +62,7 @@ export function Layout() {
                 end={l.end}
                 className={({ isActive }) =>
                   cn(
-                    "rounded px-2 py-1 font-sans transition-colors",
+                    "rounded px-2 py-2 font-sans whitespace-nowrap transition-colors sm:py-1",
                     isActive
                       ? "text-accent dark:text-accent-muted"
                       : "text-ink-500 hover:text-ink-800 dark:text-ink-300 dark:hover:text-parchment-200",
@@ -67,10 +76,13 @@ export function Layout() {
         </div>
       </header>
       <ProgressStrip />
-      <main className="container-narrow py-10">
+      <main className="container-narrow py-8 sm:py-10">
         <Outlet />
       </main>
-      <footer className="container-narrow pb-12 text-center text-xs text-ink-400 print:hidden dark:text-ink-500">
+      <footer
+        className="container-narrow pb-12 text-center text-xs text-ink-400 print:hidden dark:text-ink-500"
+        style={{ paddingBottom: "max(3rem, env(safe-area-inset-bottom))" }}
+      >
         <p className="font-sans">
           Source · <em>Story of a Soul</em>, tr. T.N. Taylor · Project Gutenberg #16772 · public domain
         </p>
