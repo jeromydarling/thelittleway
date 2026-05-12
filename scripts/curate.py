@@ -283,34 +283,56 @@ _WEAK_TAIL = {
 
 
 def derive_title(passage: str, fallback: str) -> str:
-    """Pull a short evocative title. Strategy: prefer the first natural
-    clause (up to comma / semicolon / dash) if it falls in 18-65 chars and
-    ends on a strong word; otherwise the first sentence trimmed; otherwise
-    fall back to the section name."""
+    """Pull a short evocative title.
+
+    Strategy, in order:
+      1. The first natural clause (split on , ; — or " --") if it lands in
+         18-65 chars and ends on a strong word.
+      2. The first sentence outright if it's short enough.
+      3. The first N words of the first sentence trimmed to 60-65 chars and
+         ended on a strong word (the most generous fallback).
+      4. Otherwise fall back to the section/paragraph label.
+    """
     first_sentence = re.split(r"(?<=[.!?”])\s+", passage, maxsplit=1)[0]
     first_sentence = re.sub(r"^(And|But|Then|Now|So|Yet|For)\s+", "", first_sentence)
     first_sentence = first_sentence.strip("“”\"' ").rstrip(".!?“”‘’\"' ").strip()
 
-    def finalise(text: str) -> str | None:
-        text = text.rstrip(",;:— ").strip()
-        words = text.split()
+    def strong(words: list[str]) -> list[str]:
         while len(words) > 2 and words[-1].lower().strip(",;:") in _WEAK_TAIL:
             words.pop()
+        return words
+
+    def finalise_strict(text: str) -> str | None:
+        text = text.rstrip(",;:— ").strip()
+        words = strong(text.split())
         out = " ".join(words).rstrip(",;:")
         if 18 <= len(out) <= 65:
             return out[0].upper() + out[1:]
         return None
 
-    # Try first clause
+    # 1. First clause
     clause = re.split(r"[,;—]| --|-- ", first_sentence, maxsplit=1)[0]
-    candidate = finalise(clause)
-    if candidate:
-        return candidate
+    if (t := finalise_strict(clause)):
+        return t
 
-    # Try whole first sentence
-    candidate = finalise(first_sentence)
-    if candidate:
-        return candidate
+    # 2. First sentence in range
+    if (t := finalise_strict(first_sentence)):
+        return t
+
+    # 3. Generous truncation of first sentence: take the longest prefix
+    #    that fits in ~60 chars and ends on a strong word.
+    words = first_sentence.split()
+    acc: list[str] = []
+    for w in words:
+        candidate = " ".join(acc + [w])
+        if len(candidate) > 62:
+            break
+        acc.append(w)
+    acc = strong(acc)
+    if len(acc) >= 3:
+        out = " ".join(acc).rstrip(",;:")
+        if 18 <= len(out) <= 65:
+            return out[0].upper() + out[1:]
 
     return fallback
 

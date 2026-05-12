@@ -50,6 +50,11 @@ await page.waitForSelector("article", { timeout: 10000 });
 const title = await page.locator("article h1").textContent();
 check("Day 1 title is 'The Mercies of the Lord'", title === "The Mercies of the Lord");
 
+const heroImg = await page.locator("figure img").count();
+check("homepage hero illustration present", heroImg === 1);
+const heroCaption = await page.locator("figure figcaption").textContent();
+check("hero caption is the shower of roses", /shower of roses/.test(heroCaption ?? ""));
+
 const dayBadge = await page.locator("article header p").first().textContent();
 check("Day badge mentions Day 1", /Day 1 of 365/.test(dayBadge ?? ""));
 
