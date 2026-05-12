@@ -54,7 +54,7 @@ export function DayView({ day, isToday, onChangeDay }: Props) {
           aria-label={isFavorite ? "Remove from favorites" : "Save to favorites"}
           aria-pressed={isFavorite}
           className={cn(
-            "mt-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-sans text-[0.7rem] uppercase tracking-[0.18em] transition-colors print:hidden",
+            "mt-4 inline-flex min-h-10 items-center gap-1.5 rounded-full px-4 py-2 font-sans text-[0.7rem] uppercase tracking-[0.18em] transition-colors print:hidden",
             isFavorite
               ? "bg-accent/10 text-accent dark:bg-accent-muted/15 dark:text-accent-muted"
               : "text-ink-300 hover:text-accent dark:text-ink-500 dark:hover:text-accent-muted",
@@ -108,14 +108,17 @@ export function DayView({ day, isToday, onChangeDay }: Props) {
         />
       </section>
 
-      <nav className="mt-10 flex items-center justify-between print:hidden">
+      <nav className="mt-10 flex items-center justify-between gap-1 print:hidden">
         <Button
           variant="ghost"
           size="sm"
           disabled={prev === null}
           onClick={() => prev !== null && onChangeDay(prev)}
+          aria-label={prev !== null ? `Go to day ${prev}` : "No previous day"}
+          className="min-h-11 px-2 sm:px-3"
         >
-          <ChevronLeft className="h-4 w-4" /> Day {prev ?? "—"}
+          <ChevronLeft className="h-4 w-4" />
+          Day {prev ?? "—"}
         </Button>
         <div className="flex items-center gap-1">
           <Button
@@ -124,6 +127,7 @@ export function DayView({ day, isToday, onChangeDay }: Props) {
             onClick={() => setFocusMode(!focusMode)}
             title={focusMode ? "Exit focus mode" : "Focus mode"}
             aria-pressed={focusMode}
+            className="h-11 w-11"
           >
             <Focus className="h-4 w-4" />
           </Button>
@@ -132,6 +136,7 @@ export function DayView({ day, isToday, onChangeDay }: Props) {
             size="icon"
             onClick={() => window.print()}
             title="Print this day"
+            className="h-11 w-11"
           >
             <Printer className="h-4 w-4" />
           </Button>
@@ -141,8 +146,11 @@ export function DayView({ day, isToday, onChangeDay }: Props) {
           size="sm"
           disabled={next === null}
           onClick={() => next !== null && onChangeDay(next)}
+          aria-label={next !== null ? `Go to day ${next}` : "No next day"}
+          className="min-h-11 px-2 sm:px-3"
         >
-          Day {next ?? "—"} <ChevronRight className="h-4 w-4" />
+          Day {next ?? "—"}
+          <ChevronRight className="h-4 w-4" />
         </Button>
       </nav>
     </article>

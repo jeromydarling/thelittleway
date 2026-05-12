@@ -91,12 +91,12 @@ export function Notes() {
       />
 
       {tagCounts.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setActiveTag(null)}
             className={cn(
-              "rounded-full border px-2.5 py-0.5 font-sans text-xs",
+              "min-h-9 rounded-full border px-3 py-1.5 font-sans text-xs",
               activeTag === null
                 ? "border-accent bg-accent/10 text-accent dark:border-accent-muted dark:bg-accent-muted/15 dark:text-accent-muted"
                 : "border-ink-200/60 text-ink-500 dark:border-ink-700/60 dark:text-ink-300",
@@ -110,7 +110,7 @@ export function Notes() {
               type="button"
               onClick={() => setActiveTag(activeTag === tag ? null : tag)}
               className={cn(
-                "rounded-full border px-2.5 py-0.5 font-sans text-xs",
+                "min-h-9 rounded-full border px-3 py-1.5 font-sans text-xs",
                 activeTag === tag
                   ? "border-accent bg-accent/10 text-accent dark:border-accent-muted dark:bg-accent-muted/15 dark:text-accent-muted"
                   : "border-ink-200/60 text-ink-500 dark:border-ink-700/60 dark:text-ink-300",
@@ -138,7 +138,7 @@ export function Notes() {
                 >
                   Day {day} · {p.title}
                 </Link>
-                <p className="mt-3 whitespace-pre-wrap font-serif italic text-ink-800 dark:text-parchment-200">
+                <p className="mt-3 whitespace-pre-wrap break-words font-serif italic text-ink-800 dark:text-parchment-200">
                   {renderWithTagsHighlighted(text)}
                 </p>
               </CardBody>

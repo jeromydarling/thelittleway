@@ -72,6 +72,7 @@ export function HighlightablePassage({ day, passage, citation }: Props) {
     existingColor: HighlightColor | null;
     x: number;
     y: number;
+    placement: "above" | "below";
   } | null>(null);
 
   const segments = useMemo(() => segmentise(passage, ranges), [passage, ranges]);
@@ -100,11 +101,29 @@ export function HighlightablePassage({ day, passage, citation }: Props) {
       // we'll offer to remove (in that color) rather than apply another.
       const covering = ranges.find((r) => r.start <= s && r.end >= e);
       const rect = range.getBoundingClientRect();
+      // Clamp x so the menu (~280px wide worst case) doesn't get cut off at
+      // either viewport edge — critical on phones where selections near the
+      // margin would otherwise hide the swatches.
+      const MENU_HALF = 140;
+      const MARGIN = 8;
+      const cx = Math.min(
+        Math.max(rect.left + rect.width / 2, MENU_HALF + MARGIN),
+        window.innerWidth - MENU_HALF - MARGIN,
+      );
+      // Flip below the selection if it's too close to the top of the viewport
+      // for the menu to fit above (e.g. when the iOS keyboard isn't up and the
+      // selection is on the first line of the passage).
+      const placement: "above" | "below" = rect.top < 64 ? "below" : "above";
+      const y =
+        placement === "above"
+          ? rect.top - 10 + window.scrollY
+          : rect.bottom + 10 + window.scrollY;
       setPending({
         range: { start: s, end: e },
         existingColor: covering?.color ?? null,
-        x: rect.left + rect.width / 2,
-        y: rect.top - 10 + window.scrollY,
+        x: cx,
+        y,
+        placement,
       });
     }
 
@@ -168,7 +187,10 @@ export function HighlightablePassage({ day, passage, citation }: Props) {
       {pending && (
         <div
           data-hl-action
-          className="pointer-events-auto fixed z-50 -translate-x-1/2 -translate-y-full"
+          className={cn(
+            "pointer-events-auto fixed z-50 -translate-x-1/2",
+            pending.placement === "above" && "-translate-y-full",
+          )}
           style={{ left: pending.x, top: pending.y }}
         >
           <div className="flex items-center gap-1 rounded-full border border-ink-200/60 bg-parchment-50 px-1.5 py-1 shadow-lg dark:border-ink-700/60 dark:bg-ink-900">
@@ -181,20 +203,27 @@ export function HighlightablePassage({ day, passage, citation }: Props) {
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => applyColor(c.id)}
                 className={cn(
-                  "h-7 w-7 rounded-full border border-ink-200/60 transition-transform hover:scale-110 dark:border-ink-700/60",
-                  c.id === "gold" && "bg-amber-200",
-                  c.id === "rose" && "bg-rose-300",
-                  c.id === "violet" && "bg-violet-300",
-                  c.id === lastColor && "ring-2 ring-accent ring-offset-1 ring-offset-parchment-50 dark:ring-offset-ink-900",
+                  "relative flex h-9 w-9 items-center justify-center rounded-full transition-transform hover:scale-110",
+                  c.id === lastColor &&
+                    "ring-2 ring-accent ring-offset-1 ring-offset-parchment-50 dark:ring-offset-ink-900",
                 )}
-              />
+              >
+                <span
+                  className={cn(
+                    "block h-5 w-5 rounded-full border border-ink-200/60 dark:border-ink-700/60",
+                    c.id === "gold" && "bg-amber-200",
+                    c.id === "rose" && "bg-rose-300",
+                    c.id === "violet" && "bg-violet-300",
+                  )}
+                />
+              </button>
             ))}
             <span className="mx-0.5 h-5 w-px bg-ink-200/60 dark:bg-ink-700/60" />
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={copySelection}
-              className="px-2 py-1 font-sans text-xs text-ink-600 hover:text-accent dark:text-ink-300 dark:hover:text-accent-muted"
+              className="min-h-9 px-2.5 font-sans text-xs text-ink-600 hover:text-accent dark:text-ink-300 dark:hover:text-accent-muted"
             >
               Copy
             </button>
@@ -203,7 +232,7 @@ export function HighlightablePassage({ day, passage, citation }: Props) {
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={removeExisting}
-                className="px-2 py-1 font-sans text-xs text-ink-600 hover:text-red-700 dark:text-ink-300 dark:hover:text-red-300"
+                className="min-h-9 px-2.5 font-sans text-xs text-ink-600 hover:text-red-700 dark:text-ink-300 dark:hover:text-red-300"
               >
                 Remove
               </button>
