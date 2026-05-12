@@ -1,11 +1,18 @@
 import { passages, type Passage } from "@/lib/passages";
 import { type Range, type HighlightColor } from "@/stores/useHighlights";
 
-interface JournalData {
+export interface JournalData {
   notes: Record<number, string>;
   highlights: Record<number, Range[]>;
   favorites: Record<number, string>;
   startDate: string;
+}
+
+export interface JournalBackup {
+  version: 1;
+  app: "the-little-way";
+  exportedAt: string;
+  data: JournalData;
 }
 
 const colorLabel: Record<HighlightColor, string> = {
@@ -100,12 +107,61 @@ function byDay(day: number): Passage | undefined {
 }
 
 export function downloadJournalMarkdown(data: JournalData): void {
-  const md = buildJournalMarkdown(data);
-  const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+  triggerDownload(
+    buildJournalMarkdown(data),
+    `the-little-way-journal-${new Date().toISOString().slice(0, 10)}.md`,
+    "text/markdown;charset=utf-8",
+  );
+}
+
+export function downloadJournalBackup(data: JournalData): void {
+  const backup: JournalBackup = {
+    version: 1,
+    app: "the-little-way",
+    exportedAt: new Date().toISOString(),
+    data,
+  };
+  triggerDownload(
+    JSON.stringify(backup, null, 2),
+    `the-little-way-backup-${new Date().toISOString().slice(0, 10)}.json`,
+    "application/json;charset=utf-8",
+  );
+}
+
+/**
+ * Parse a backup file. Returns the data payload or throws with a
+ * user-readable error. We require the app marker so users can't accidentally
+ * import an unrelated JSON and clobber their journal.
+ */
+export function parseJournalBackup(text: string): JournalData {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error("Not a valid JSON file.");
+  }
+  const b = parsed as Partial<JournalBackup>;
+  if (b?.app !== "the-little-way" || b?.version !== 1 || !b?.data) {
+    throw new Error("Not a Little Way backup file.");
+  }
+  const d = b.data;
+  if (typeof d.startDate !== "string") {
+    throw new Error("Missing or invalid startDate in backup.");
+  }
+  return {
+    notes: d.notes ?? {},
+    highlights: d.highlights ?? {},
+    favorites: d.favorites ?? {},
+    startDate: d.startDate,
+  };
+}
+
+function triggerDownload(content: string, filename: string, mime: string): void {
+  const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `the-little-way-journal-${new Date().toISOString().slice(0, 10)}.md`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

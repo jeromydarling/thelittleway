@@ -6,6 +6,7 @@ interface FavoritesState {
   byDay: Record<number, string>;
   toggle: (day: number) => void;
   isFavorite: (day: number) => boolean;
+  replaceAll: (next: Record<number, string>) => void;
 }
 
 export const useFavorites = create<FavoritesState>()(
@@ -20,6 +21,7 @@ export const useFavorites = create<FavoritesState>()(
           return { byDay: next };
         }),
       isFavorite: (day) => Boolean(get().byDay[day]),
+      replaceAll: (next) => set({ byDay: next }),
     }),
     { name: "littleway.favorites", version: 1 },
   ),

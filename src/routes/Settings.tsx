@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Switch } from "@/components/ui/Switch";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -8,7 +8,12 @@ import { passages } from "@/lib/passages";
 import { useNotes } from "@/stores/useNotes";
 import { useHighlights } from "@/stores/useHighlights";
 import { useFavorites } from "@/stores/useFavorites";
-import { downloadJournalMarkdown } from "@/lib/exportJournal";
+import {
+  downloadJournalMarkdown,
+  downloadJournalBackup,
+  parseJournalBackup,
+} from "@/lib/exportJournal";
+import { YearHeatmap } from "@/components/YearHeatmap";
 import {
   permissionState,
   requestPermission,
@@ -29,10 +34,39 @@ export function Settings() {
     resetProgress,
   } = useSettings();
   const notes = useNotes((s) => s.byDay);
+  const replaceNotes = useNotes((s) => s.replaceAll);
   const highlights = useHighlights((s) => s.byDay);
+  const replaceHighlights = useHighlights((s) => s.replaceAll);
   const favorites = useFavorites((s) => s.byDay);
+  const replaceFavorites = useFavorites((s) => s.replaceAll);
   const hasJournal =
     Object.keys(notes).length + Object.keys(highlights).length + Object.keys(favorites).length > 0;
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importStatus, setImportStatus] = useState<string | null>(null);
+
+  async function handleImport(file: File) {
+    setImportStatus(null);
+    try {
+      const text = await file.text();
+      const data = parseJournalBackup(text);
+      const counts =
+        Object.keys(data.notes).length +
+        Object.keys(data.highlights).length +
+        Object.keys(data.favorites).length;
+      const proceed = confirm(
+        `Restore ${counts} journal entries from this backup? ` +
+          `Your current notes, highlights, and favorites will be replaced.`,
+      );
+      if (!proceed) return;
+      replaceNotes(data.notes);
+      replaceHighlights(data.highlights);
+      replaceFavorites(data.favorites);
+      setImportStatus(`Restored ${counts} entries.`);
+    } catch (err) {
+      setImportStatus((err as Error).message);
+    }
+  }
 
   const [perm, setPerm] = useState<PermissionState>("default");
   useEffect(() => {
@@ -137,31 +171,81 @@ export function Settings() {
       </Card>
 
       <Card>
+        <CardBody className="space-y-4">
+          <h2 className="font-serif text-lg italic">Year at a glance</h2>
+          <p className="font-sans text-sm text-ink-500 dark:text-ink-400">
+            Each cell is a day. Darker = more annotated. Tap to jump.
+          </p>
+          <YearHeatmap />
+        </CardBody>
+      </Card>
+
+      <Card>
         <CardBody className="space-y-3">
           <h2 className="font-serif text-lg italic">Your journal</h2>
           <p className="font-sans text-sm text-ink-500 dark:text-ink-400">
             Download every kept day, highlight, and note as a single Markdown
             file. Your writing is yours — keep a copy anywhere you like.
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!hasJournal}
-            onClick={() =>
-              downloadJournalMarkdown({
-                notes,
-                highlights,
-                favorites,
-                startDate,
-              })
-            }
-          >
-            Download journal (Markdown)
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!hasJournal}
+              onClick={() =>
+                downloadJournalMarkdown({
+                  notes,
+                  highlights,
+                  favorites,
+                  startDate,
+                })
+              }
+            >
+              Download as Markdown
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!hasJournal}
+              onClick={() =>
+                downloadJournalBackup({
+                  notes,
+                  highlights,
+                  favorites,
+                  startDate,
+                })
+              }
+            >
+              Download backup (JSON)
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Restore backup
+            </Button>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleImport(f);
+              e.target.value = "";
+            }}
+          />
+          {importStatus && (
+            <p className="font-sans text-xs text-ink-500 dark:text-ink-400">
+              {importStatus}
+            </p>
+          )}
           {!hasJournal && (
             <p className="font-sans text-xs text-ink-400 dark:text-ink-500">
-              Nothing to export yet. Add a highlight, write a note, or keep a
-              day with the heart button.
+              Markdown is your readable keepsake. JSON is the lossless backup
+              that another device can restore.
             </p>
           )}
         </CardBody>
