@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useHighlights, type Range as HRange } from "@/stores/useHighlights";
-import { Button } from "@/components/ui/Button";
+import {
+  useHighlights,
+  type Range as HRange,
+  type HighlightColor,
+  HIGHLIGHT_COLORS,
+} from "@/stores/useHighlights";
 import { cn } from "@/lib/utils";
 
 const EMPTY_RANGES: HRange[] = [];
@@ -8,56 +12,44 @@ const EMPTY_RANGES: HRange[] = [];
 interface Props {
   day: number;
   passage: string;
+  citation?: string;
 }
 
 interface Segment {
   text: string;
-  highlighted: boolean;
+  color: HighlightColor | null;
   start: number;
   end: number;
 }
 
+/**
+ * Build a flat list of contiguous segments where each segment is either
+ * unhighlighted or carries one highlight color. Overlapping ranges of
+ * different colors stack — the inner color wins (last one written).
+ */
 function segmentise(passage: string, ranges: HRange[]): Segment[] {
   if (ranges.length === 0) {
-    return [{ text: passage, highlighted: false, start: 0, end: passage.length }];
+    return [{ text: passage, color: null, start: 0, end: passage.length }];
+  }
+  // Build a per-character color array (last writer wins on overlap).
+  const colors: (HighlightColor | null)[] = new Array(passage.length).fill(null);
+  for (const r of ranges) {
+    for (let i = Math.max(0, r.start); i < Math.min(passage.length, r.end); i++) {
+      colors[i] = r.color;
+    }
   }
   const segs: Segment[] = [];
-  let cursor = 0;
-  for (const r of ranges) {
-    const start = Math.max(0, r.start);
-    const end = Math.min(passage.length, r.end);
-    if (cursor < start) {
-      segs.push({
-        text: passage.slice(cursor, start),
-        highlighted: false,
-        start: cursor,
-        end: start,
-      });
-    }
-    segs.push({
-      text: passage.slice(start, end),
-      highlighted: true,
-      start,
-      end,
-    });
-    cursor = end;
-  }
-  if (cursor < passage.length) {
-    segs.push({
-      text: passage.slice(cursor),
-      highlighted: false,
-      start: cursor,
-      end: passage.length,
-    });
+  let i = 0;
+  while (i < passage.length) {
+    const c = colors[i];
+    let j = i + 1;
+    while (j < passage.length && colors[j] === c) j++;
+    segs.push({ text: passage.slice(i, j), color: c, start: i, end: j });
+    i = j;
   }
   return segs;
 }
 
-/**
- * Walks descendants of `root` and returns the character offset of `node`'s
- * `offset` position into the concatenated text. Returns -1 if `node` is not
- * inside `root`.
- */
 function textOffset(root: HTMLElement, node: Node, offset: number): number {
   let pos = 0;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -67,18 +59,17 @@ function textOffset(root: HTMLElement, node: Node, offset: number): number {
     pos += (current.nodeValue ?? "").length;
     current = walker.nextNode();
   }
-  // The selection may end on an element node (e.g. a <mark>); treat that as
-  // the start of the next text node.
   return node.contains(root) || root.contains(node) ? pos : -1;
 }
 
-export function HighlightablePassage({ day, passage }: Props) {
+export function HighlightablePassage({ day, passage, citation }: Props) {
   const ranges = useHighlights((s) => s.byDay[day]) ?? EMPTY_RANGES;
   const toggle = useHighlights((s) => s.toggle);
+  const lastColor = useHighlights((s) => s.lastColor);
   const containerRef = useRef<HTMLDivElement>(null);
   const [pending, setPending] = useState<{
-    range: HRange;
-    isExisting: boolean;
+    range: Omit<HRange, "color">;
+    existingColor: HighlightColor | null;
     x: number;
     y: number;
   } | null>(null);
@@ -105,18 +96,19 @@ export function HighlightablePassage({ day, passage }: Props) {
         return;
       }
       const [s, e] = start < end ? [start, end] : [end, start];
-      const isExisting = ranges.some((r) => r.start <= s && r.end >= e);
+      // Detect if the selection is already covered by some highlight; if so,
+      // we'll offer to remove (in that color) rather than apply another.
+      const covering = ranges.find((r) => r.start <= s && r.end >= e);
       const rect = range.getBoundingClientRect();
       setPending({
         range: { start: s, end: e },
-        isExisting,
+        existingColor: covering?.color ?? null,
         x: rect.left + rect.width / 2,
-        y: rect.top - 8 + window.scrollY,
+        y: rect.top - 10 + window.scrollY,
       });
     }
 
     function clear(e: Event) {
-      // Don't clear when the user is tapping the action button itself.
       const target = e.target as HTMLElement | null;
       if (target?.closest("[data-hl-action]")) return;
       const sel = window.getSelection();
@@ -133,19 +125,39 @@ export function HighlightablePassage({ day, passage }: Props) {
     };
   }, [ranges]);
 
-  function commit() {
+  function applyColor(color: HighlightColor) {
     if (!pending) return;
-    toggle(day, pending.range);
+    toggle(day, { ...pending.range, color });
+    window.getSelection()?.removeAllRanges();
+    setPending(null);
+  }
+
+  function removeExisting() {
+    if (!pending || !pending.existingColor) return;
+    toggle(day, { ...pending.range, color: pending.existingColor });
+    window.getSelection()?.removeAllRanges();
+    setPending(null);
+  }
+
+  async function copySelection() {
+    if (!pending) return;
+    const text = passage.slice(pending.range.start, pending.range.end);
+    const cite = citation ? `\n— ${citation}` : "";
+    try {
+      await navigator.clipboard.writeText(`“${text}”${cite}`);
+    } catch {
+      // Clipboard may be unavailable (non-https, perms); ignore silently
+    }
     window.getSelection()?.removeAllRanges();
     setPending(null);
   }
 
   return (
     <div className="relative">
-      <div ref={containerRef} className="passage-text">
+      <div ref={containerRef} className="passage-text with-drop-cap">
         {segments.map((seg, i) =>
-          seg.highlighted ? (
-            <mark key={i} className="user-hl">
+          seg.color ? (
+            <mark key={i} className="user-hl" data-color={seg.color}>
               {seg.text}
             </mark>
           ) : (
@@ -159,15 +171,44 @@ export function HighlightablePassage({ day, passage }: Props) {
           className="pointer-events-auto fixed z-50 -translate-x-1/2 -translate-y-full"
           style={{ left: pending.x, top: pending.y }}
         >
-          <Button
-            size="sm"
-            variant="default"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={commit}
-            className={cn("shadow-lg")}
-          >
-            {pending.isExisting ? "Remove highlight" : "Highlight"}
-          </Button>
+          <div className="flex items-center gap-1 rounded-full border border-ink-200/60 bg-parchment-50 px-1.5 py-1 shadow-lg dark:border-ink-700/60 dark:bg-ink-900">
+            {HIGHLIGHT_COLORS.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                aria-label={`Highlight in ${c.label} — ${c.hint}`}
+                title={`${c.label} — ${c.hint}`}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => applyColor(c.id)}
+                className={cn(
+                  "h-7 w-7 rounded-full border border-ink-200/60 transition-transform hover:scale-110 dark:border-ink-700/60",
+                  c.id === "gold" && "bg-amber-200",
+                  c.id === "rose" && "bg-rose-300",
+                  c.id === "violet" && "bg-violet-300",
+                  c.id === lastColor && "ring-2 ring-accent ring-offset-1 ring-offset-parchment-50 dark:ring-offset-ink-900",
+                )}
+              />
+            ))}
+            <span className="mx-0.5 h-5 w-px bg-ink-200/60 dark:bg-ink-700/60" />
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={copySelection}
+              className="px-2 py-1 font-sans text-xs text-ink-600 hover:text-accent dark:text-ink-300 dark:hover:text-accent-muted"
+            >
+              Copy
+            </button>
+            {pending.existingColor && (
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={removeExisting}
+                className="px-2 py-1 font-sans text-xs text-ink-600 hover:text-red-700 dark:text-ink-300 dark:hover:text-red-300"
+              >
+                Remove
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
