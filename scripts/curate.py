@@ -23,7 +23,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "data" / "source" / "story_of_a_soul_16772.txt"
 OUT = ROOT / "data" / "devotional" / "passages.json"
-ASV_SRC = ROOT / "data" / "source" / "asv_1901.json"
+
+# Gospel-text sources, in preference order. Drop a Lockman-licensed
+# nasb_1977.json (same shape as the ASV file we ship) at the first path to
+# switch translations — the build will pick it up automatically. ASV 1901
+# is the fallback because it is public domain.
+GOSPEL_SOURCES: list[tuple[Path, str]] = [
+    (ROOT / "data" / "source" / "nasb_1977.json", "NASB"),
+    (ROOT / "data" / "source" / "asv_1901.json", "ASV"),
+]
 SAYINGS_SRC = ROOT / "data" / "gospel" / "sayings.json"
 
 # Standard Protestant book numbering used by bibleapi/bibleapi-bibles-json
@@ -296,32 +304,62 @@ def _parse_ref(ref: str) -> tuple[str, int, int, int]:
     return book, chap, v_start, v_end
 
 
-def _load_asv_index() -> dict[int, dict[int, dict[int, str]]]:
-    """Index ASV rows as { book_num: { chapter: { verse: text } } }."""
-    data = json.loads(ASV_SRC.read_text(encoding="utf-8"))
+def _select_gospel_source() -> tuple[Path, str]:
+    """Return the first available (path, translation_label) from
+    GOSPEL_SOURCES so a user can drop in NASB 1977 to override the default
+    ASV 1901."""
+    for path, label in GOSPEL_SOURCES:
+        if path.exists():
+            return path, label
+    raise FileNotFoundError(
+        f"No gospel source found. Expected one of: "
+        f"{[str(p) for p, _ in GOSPEL_SOURCES]}"
+    )
+
+
+def _load_bible_index(path: Path) -> dict[int, dict[int, dict[int, str]]]:
+    """Index Bible rows as { book_num: { chapter: { verse: text } } }.
+    Accepts either the flat resultset.row format used by bibleapi/asv.json
+    or a pre-nested { "<book>": { "<chap>": { "<verse>": text } } } shape."""
+    data = json.loads(path.read_text(encoding="utf-8"))
     out: dict[int, dict[int, dict[int, str]]] = {}
-    for r in data["resultset"]["row"]:
-        _id, bk, ch, vs, txt = r["field"]
-        out.setdefault(bk, {}).setdefault(ch, {})[vs] = txt
+    if isinstance(data, dict) and "resultset" in data:
+        for r in data["resultset"]["row"]:
+            _id, bk, ch, vs, txt = r["field"]
+            out.setdefault(bk, {}).setdefault(ch, {})[vs] = txt
+    else:
+        # Nested-by-name shape: { "Matthew": { "5": { "3": "..." } } }
+        for name, chapters in data.items():
+            bk = BOOK_NUMBERS.get(name)
+            if bk is None:
+                continue
+            for ch_key, verses in chapters.items():
+                ch = int(ch_key)
+                for v_key, txt in verses.items():
+                    out.setdefault(bk, {}).setdefault(ch, {})[int(v_key)] = txt
     return out
 
 
-def load_sayings() -> list[Saying]:
+def load_sayings() -> tuple[list[Saying], str]:
+    """Resolve each saying ref against the active Bible source. Returns
+    (sayings, translation_label) so the build can record which translation
+    was used."""
     raw = json.loads(SAYINGS_SRC.read_text(encoding="utf-8"))
-    asv = _load_asv_index()
+    src_path, label = _select_gospel_source()
+    index = _load_bible_index(src_path)
     sayings: list[Saying] = []
     for entry in raw:
         book, chap, v0, v1 = _parse_ref(entry["ref"])
         bk = BOOK_NUMBERS.get(book)
-        if bk is None or bk not in asv or chap not in asv[bk]:
+        if bk is None or bk not in index or chap not in index[bk]:
             raise ValueError(f"Unknown book/chapter in saying ref: {entry['ref']}")
-        verses = [asv[bk][chap].get(v) for v in range(v0, v1 + 1)]
+        verses = [index[bk][chap].get(v) for v in range(v0, v1 + 1)]
         if any(v is None for v in verses):
-            raise ValueError(f"Missing verses in {entry['ref']}")
+            raise ValueError(f"Missing verses in {entry['ref']} (using {label})")
         text = " ".join(verses).strip()
         themes = tuple(t.lower() for t in entry["themes"])
         sayings.append(Saying(ref=entry["ref"], text=text, themes=themes))
-    return sayings
+    return sayings, label
 
 
 _TOKEN_RE = re.compile(r"[a-z]{3,}")
@@ -390,16 +428,17 @@ class Entry:
     citation: str
     gospel_ref: str
     gospel_text: str
+    gospel_translation: str
 
 
-def build() -> list[Entry]:
+def build() -> tuple[list[Entry], str]:
     lines = load_lines()
     items = assemble_paragraphs(lines)
     if not items:
         raise RuntimeError("No paragraphs assembled from source")
 
     days = chunk_to_days(items, TOTAL_DAYS)
-    sayings = load_sayings()
+    sayings, translation = load_sayings()
 
     passages: list[str] = [" ".join(it.text for it in g) for g in days]
     paired = pair_sayings_to_days(passages, sayings)
@@ -417,14 +456,15 @@ def build() -> list[Entry]:
                 citation=f"Story of a Soul — {section}",
                 gospel_ref=saying.ref,
                 gospel_text=saying.text,
+                gospel_translation=translation,
             )
         )
-    return entries
+    return entries, translation
 
 
 def main() -> None:
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    entries = build()
+    entries, translation = build()
     payload = [
         {
             "day": e.day,
@@ -434,10 +474,12 @@ def main() -> None:
             "gospel": {
                 "ref": e.gospel_ref,
                 "text": e.gospel_text,
+                "translation": e.gospel_translation,
             },
         }
         for e in entries
     ]
+    print(f"Gospel translation in use: {translation}")
     OUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Wrote {len(payload)} entries to {OUT.relative_to(ROOT)}")
 

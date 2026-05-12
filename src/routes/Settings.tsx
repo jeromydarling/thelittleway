@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { useSettings } from "@/stores/useSettings";
+import { passages } from "@/lib/passages";
 import {
   permissionState,
   requestPermission,
@@ -137,8 +138,8 @@ export function Settings() {
             tr., 1922), the <em>Counsels and Reminiscences</em>, and her
             <em> letters</em> — drawn from Project Gutenberg ebook #16772 and
             read in the order Thérèse wrote them. Each day is paired with a
-            saying of Christ from the Gospels (American Standard Version,
-            1901), chosen by thematic resonance with the day's reading.
+            saying of Christ from the Gospels ({passages[0]?.gospel.translation ?? "ASV"}),
+            chosen by thematic resonance with the day's reading.
           </p>
         </CardBody>
       </Card>

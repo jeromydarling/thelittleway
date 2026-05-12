@@ -3,6 +3,7 @@ import raw from "@data/devotional/passages.json";
 export interface GospelPairing {
   ref: string;
   text: string;
+  translation: string;
 }
 
 export interface Passage {
