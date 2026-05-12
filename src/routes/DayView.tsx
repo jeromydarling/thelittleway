@@ -53,7 +53,7 @@ export function DayView({ day, isToday, onChangeDay }: Props) {
           “{passage.gospel.text}”
         </blockquote>
         <p className="mt-2 text-right font-sans text-xs text-ink-400 dark:text-ink-500">
-          — {passage.gospel.ref} (ASV)
+          — {passage.gospel.ref} ({passage.gospel.translation})
         </p>
       </aside>
 
