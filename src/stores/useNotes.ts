@@ -5,6 +5,7 @@ interface NotesState {
   byDay: Record<number, string>;
   setNote: (day: number, text: string) => void;
   clear: (day: number) => void;
+  replaceAll: (next: Record<number, string>) => void;
 }
 
 export const useNotes = create<NotesState>()(
@@ -27,6 +28,7 @@ export const useNotes = create<NotesState>()(
           delete next[day];
           return { byDay: next };
         }),
+      replaceAll: (next) => set({ byDay: next }),
     }),
     { name: "littleway.notes", version: 1 },
   ),

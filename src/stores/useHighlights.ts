@@ -28,6 +28,7 @@ interface HighlightsState {
   toggle: (day: number, range: Range) => void;
   setColor: (color: HighlightColor) => void;
   clear: (day: number) => void;
+  replaceAll: (next: Record<number, Range[]>) => void;
 }
 
 function mergeIn(existing: Range[], next: Range): Range[] {
@@ -98,6 +99,7 @@ export const useHighlights = create<HighlightsState>()(
           delete next[day];
           return { byDay: next };
         }),
+      replaceAll: (next) => set({ byDay: next }),
     }),
     {
       name: "littleway.highlights",
