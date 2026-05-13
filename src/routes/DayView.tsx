@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Heart, Focus, Printer } from "lucide-react";
 import { getPassage, TOTAL_DAYS } from "@/lib/passages";
 import { HighlightablePassage } from "@/components/HighlightablePassage";
+import { ShareButton } from "@/components/ShareButton";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { useNotes } from "@/stores/useNotes";
 import { useFavorites } from "@/stores/useFavorites";
 import { useSettings } from "@/stores/useSettings";
 import { liturgicalHint } from "@/lib/liturgy";
+import { metaForDay, teaserFromPassage } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -131,6 +133,11 @@ export function DayView({ day, isToday, onChangeDay }: Props) {
           >
             <Focus className="h-4 w-4" />
           </Button>
+          <ShareButton
+            url={metaForDay(day).url}
+            title={`Day ${day} · ${passage.title} — The Little Way`}
+            text={teaserFromPassage(passage.passage, 120)}
+          />
           <Button
             variant="ghost"
             size="icon"

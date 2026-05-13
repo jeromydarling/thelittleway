@@ -8,13 +8,56 @@
     <meta name="theme-color" content="#1a1612" media="(prefers-color-scheme: dark)" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <!-- These tags are the *default* preview. The build-time prerender swaps
+         in day-specific copies of this file at dist/day/N/index.html so
+         crawlers and Slack/Twitter/Facebook get rich, route-specific cards. -->
+    <title>The Little Way — A daily devotional from St Thérèse of Lisieux</title>
+    <meta name="description" content="A daily devotional from St Thérèse of Lisieux — read Story of a Soul in 365 days, paired with the Gospels." />
+    <link rel="canonical" href="https://jeromydarling.github.io/thelittleway/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="The Little Way" />
+    <meta property="og:title" content="The Little Way — A daily devotional from St Thérèse of Lisieux" />
+    <meta property="og:description" content="A daily devotional from St Thérèse of Lisieux — read Story of a Soul in 365 days, paired with the Gospels." />
+    <meta property="og:url" content="https://jeromydarling.github.io/thelittleway/" />
+    <meta property="og:image" content="https://jeromydarling.github.io/thelittleway/og-card.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="The Little Way — a daily devotional from St Thérèse of Lisieux" />
+    <meta property="og:locale" content="en_US" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="The Little Way — A daily devotional from St Thérèse of Lisieux" />
+    <meta name="twitter:description" content="A daily devotional from St Thérèse of Lisieux — read Story of a Soul in 365 days, paired with the Gospels." />
+    <meta name="twitter:image" content="https://jeromydarling.github.io/thelittleway/og-card.png" />
+
+    <link rel="alternate" type="application/atom+xml" title="The Little Way — daily readings" href="https://jeromydarling.github.io/thelittleway/feed.xml" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600&display=swap"
     />
-    <title>The Little Way · A Devotional from St Thérèse of Lisieux</title>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "The Little Way",
+        "url": "https://jeromydarling.github.io/thelittleway/",
+        "description": "A daily devotional from St Thérèse of Lisieux — read Story of a Soul in 365 days, paired with the Gospels.",
+        "inLanguage": "en",
+        "about": {
+          "@type": "Book",
+          "name": "Story of a Soul",
+          "author": { "@type": "Person", "name": "St Thérèse of Lisieux" },
+          "translator": { "@type": "Person", "name": "T. N. Taylor" },
+          "datePublished": "1898"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
