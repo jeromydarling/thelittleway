@@ -19,8 +19,11 @@ import {
   requestPermission,
   type PermissionState,
 } from "@/lib/notifications";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+import { metaForRoute } from "@/lib/seo";
 
 export function Settings() {
+  useDocumentMeta(metaForRoute("settings"));
   const {
     reminderEnabled,
     setReminderEnabled,

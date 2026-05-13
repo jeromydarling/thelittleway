@@ -2,8 +2,11 @@ import { Link } from "react-router-dom";
 import { useFavorites } from "@/stores/useFavorites";
 import { getPassage } from "@/lib/passages";
 import { Card, CardBody } from "@/components/ui/Card";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+import { metaForRoute } from "@/lib/seo";
 
 export function Favorites() {
+  useDocumentMeta(metaForRoute("favorites"));
   const byDay = useFavorites((s) => s.byDay);
   const entries = Object.entries(byDay)
     .map(([day]) => ({ day: Number(day) }))

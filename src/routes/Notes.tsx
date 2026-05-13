@@ -5,6 +5,8 @@ import { getPassage } from "@/lib/passages";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+import { metaForRoute } from "@/lib/seo";
 
 const TAG_RE = /(^|\s)#([a-zA-Z][\w-]*)/g;
 
@@ -33,6 +35,7 @@ function renderWithTagsHighlighted(text: string) {
 }
 
 export function Notes() {
+  useDocumentMeta(metaForRoute("notes"));
   const byDay = useNotes((s) => s.byDay);
   const [query, setQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);

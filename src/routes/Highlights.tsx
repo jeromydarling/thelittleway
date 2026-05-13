@@ -4,6 +4,8 @@ import { useHighlights, type HighlightColor } from "@/stores/useHighlights";
 import { getPassage } from "@/lib/passages";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+import { metaForRoute } from "@/lib/seo";
 
 const colorLabel: Record<HighlightColor, string> = {
   gold: "consolation",
@@ -12,6 +14,7 @@ const colorLabel: Record<HighlightColor, string> = {
 };
 
 export function Highlights() {
+  useDocumentMeta(metaForRoute("highlights"));
   const byDay = useHighlights((s) => s.byDay);
   const [query, setQuery] = useState("");
 

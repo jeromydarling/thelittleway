@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/prerender.mjs",
+    "build:og": "node scripts/build-og-card.mjs",
     "preview": "vite preview",
     "curate": "python3 scripts/curate.py"
   },
