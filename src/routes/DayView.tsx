@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Heart, Focus, Printer } from "lucide-react";
 import { getPassage, TOTAL_DAYS } from "@/lib/passages";
 import { HighlightablePassage } from "@/components/HighlightablePassage";
@@ -20,18 +20,60 @@ interface Props {
 
 export function DayView({ day, isToday, onChangeDay }: Props) {
   const passage = getPassage(day);
-  const note = useNotes((s) => s.byDay[day] ?? "");
   const setNote = useNotes((s) => s.setNote);
   const isFavorite = useFavorites((s) => Boolean(s.byDay[day]));
   const toggleFavorite = useFavorites((s) => s.toggle);
   const focusMode = useSettings((s) => s.focusMode);
   const setFocusMode = useSettings((s) => s.setFocusMode);
-  const [draft, setDraft] = useState(note);
+  const [draft, setDraft] = useState(
+    () => useNotes.getState().byDay[day] ?? "",
+  );
   const hint = isToday ? liturgicalHint() : null;
 
+  // Load the stored note for this day exactly once per day change. We use
+  // useNotes.getState() (not the `note` selector) so this effect doesn't
+  // re-fire when autosave writes back — that would clobber active typing.
   useEffect(() => {
-    setDraft(note);
-  }, [day, note]);
+    setDraft(useNotes.getState().byDay[day] ?? "");
+  }, [day]);
+
+  // Autosave the note. Three triggers, each catching a different way a
+  // user could lose work:
+  //   1. A 400ms debounce after the last keystroke — typing in the
+  //      textarea persists continuously without thrashing localStorage.
+  //   2. visibilitychange + pagehide — mobile Safari (and Chrome under
+  //      memory pressure) can discard the tab while it's backgrounded;
+  //      we have to flush *before* that happens, because blur won't fire
+  //      when the user just switches tabs.
+  //   3. Unmount — covers in-app navigation to another day or route.
+  const draftRef = useRef(draft);
+  const dayRef = useRef(day);
+  draftRef.current = draft;
+  dayRef.current = day;
+
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      const stored = useNotes.getState().byDay[day] ?? "";
+      if (draft !== stored) setNote(day, draft);
+    }, 400);
+    return () => window.clearTimeout(id);
+  }, [draft, day, setNote]);
+
+  useEffect(() => {
+    function flush() {
+      const stored = useNotes.getState().byDay[dayRef.current] ?? "";
+      if (draftRef.current !== stored) {
+        setNote(dayRef.current, draftRef.current);
+      }
+    }
+    window.addEventListener("visibilitychange", flush);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      flush();
+      window.removeEventListener("visibilitychange", flush);
+      window.removeEventListener("pagehide", flush);
+    };
+  }, [setNote]);
 
   const prev = day === 1 ? null : day - 1;
   const next = day === TOTAL_DAYS ? null : day + 1;
@@ -103,9 +145,6 @@ export function DayView({ day, isToday, onChangeDay }: Props) {
           rows={4}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          onBlur={() => {
-            if (draft !== note) setNote(day, draft);
-          }}
           placeholder="A line for today, a prayer, a remembrance…"
         />
       </section>

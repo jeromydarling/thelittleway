@@ -97,11 +97,27 @@ console.log("→ write a note and verify it persists across reload");
 const noteText = "Today: trust, not effort.";
 await page.locator("textarea").first().fill(noteText);
 await page.locator("textarea").first().blur();
-await page.waitForTimeout(200);
+await page.waitForTimeout(600); // wait for debounced autosave (400ms)
 await page.reload();
 await page.waitForSelector("textarea");
 const reloaded = await page.locator("textarea").first().inputValue();
 check("note persists across reload", reloaded === noteText);
+
+console.log("→ tab-switch simulation: type then fire visibilitychange without blur");
+const tabSwitchText = "Mid-sentence, no blur—";
+await page.locator("textarea").first().fill(tabSwitchText);
+// Don't blur. Simulate the tab going to the background and the page being
+// discarded (Safari memory-pressure path).
+await page.evaluate(() => {
+  Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+  document.dispatchEvent(new Event("visibilitychange"));
+  window.dispatchEvent(new Event("pagehide"));
+});
+await page.waitForTimeout(100);
+await page.reload();
+await page.waitForSelector("textarea");
+const afterTabSwitch = await page.locator("textarea").first().inputValue();
+check("note persists when tab is hidden without blur", afterTabSwitch === tabSwitchText);
 
 console.log("→ navigate to Day 2 via Next button");
 await page.locator("button:has-text('Day 2')").click();
@@ -118,7 +134,9 @@ check("Day 1 highlight visible in /highlights", hlEntries > 0);
 console.log("→ visit /notes");
 await page.goto("/notes");
 await page.waitForSelector("h1:has-text('Your notes')");
-const noteBody = await page.locator(`text=${noteText}`).count();
+// The tab-switch test overwrote day 1 with tabSwitchText — that's what
+// should be visible now.
+const noteBody = await page.locator(`text=${tabSwitchText}`).count();
 check("note visible in /notes", noteBody > 0);
 
 console.log("→ visit /settings — toggle reminder");
